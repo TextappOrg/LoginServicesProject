@@ -2,6 +2,8 @@ package ControllerPackage;
 
 import DAOPackage.RegistrationDaoInterface;
 import DAOPackage.RegistrationDaoMongoDb;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.istack.internal.Nullable;
 
 import javax.annotation.Resource;
@@ -10,9 +12,12 @@ import javax.servlet.annotation.WebServlet;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
+import java.lang.annotation.Retention;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,7 +31,7 @@ public class RegistrationController {
 
     private RegistrationDaoInterface registrationDaoInstanceMongoDb;
 
-    public RegistrationController() throws NamingException {
+    public RegistrationController() {
         this.registrationDaoInstanceMongoDb = new RegistrationDaoMongoDb();
 
     }
@@ -76,15 +81,30 @@ public class RegistrationController {
     @POST
     @Path("/Login")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    @SuppressWarnings( "javadoc" )
     public Response loginUser(@NotNull @FormParam("username") String username,
-                              @NotNull @FormParam("password") String password) throws NamingException {
+                              @NotNull @FormParam("password") String password)  {
         try {
-            return this.registrationDaoInstanceMongoDb.createRegistrationDAO().authenticateUser( username, password ) ? Response.status( 200
-            ).build() :
-                    Response.status( 401 ).build();
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            LinkedHashMap<String,Object> judgement = this.registrationDaoInstanceMongoDb
+                                                    .createRegistrationDAO()
+                                                    .authenticateUser( username,password );
+            if(judgement.get("flag").equals("new")){
+                ObjectMapper mapper = new ObjectMapper();
+                judgement.remove( "flag" );
+                String jsonDat = mapper.writeValueAsString( judgement);
+                return Response.status(Response.Status.OK).header("token",jsonDat).cookie(new NewCookie("token",
+                        jsonDat)).build();
+            }else if(((String) judgement.get( "flag" )).equalsIgnoreCase( "logged" )){
+                return Response.status(Response.Status.CONFLICT).entity( "User already logged in" ).build();
+            }else if(((String) judgement.get( "flag" )).equalsIgnoreCase( "NaN" )){
+                return Response.status( Response.Status.NO_CONTENT ).entity( "User not found" ).build();
+            }
+            return Response.status( Response.Status.NOT_FOUND ).build();
+
+        } catch (InvalidKeySpecException | NamingException | JsonProcessingException | NoSuchAlgorithmException e) {
             Logger.getAnonymousLogger().log( Level.SEVERE, e.getMessage() );
-            return Response.status( 500 ).build();
+            return Response.status( Response.Status.INTERNAL_SERVER_ERROR ).build();
         }
     }
 

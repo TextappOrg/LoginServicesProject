@@ -6,6 +6,7 @@ import javax.naming.NamingException;
 import javax.validation.constraints.NotNull;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.LinkedHashMap;
 
 public interface RegistrationDaoInterface {
     @SuppressWarnings(value = "unchecked")
@@ -20,8 +21,10 @@ public interface RegistrationDaoInterface {
     boolean changeUniqueid(@NotNull String username);
 
     @SuppressWarnings(value = "unchecked")
-    boolean authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
+    LinkedHashMap<String, Object> authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
             NoSuchAlgorithmException;
+
+    boolean logoutService(@NotNull String username, @NotNull String clientToken);
 
     RegistrationDaoInterface setRealfirstname(@NotNull String realFirstname);
 

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
+@SuppressWarnings("WeakerAccess")
 @XmlRootElement
 public class RegistrationBean implements RegistrationBeanInterface {
 
@@ -36,6 +37,7 @@ public class RegistrationBean implements RegistrationBeanInterface {
      * @param password
      * @param saltedPassword
      */
+    @SuppressWarnings( value = "javadoc")
     public RegistrationBean(String username, String realFirstname,
                             String realMiddlename, String realLastname, String uniqueId,
                             String secretQuestion, byte[] saltedQuestion,
@@ -147,7 +149,7 @@ public class RegistrationBean implements RegistrationBeanInterface {
     }
 
     public LinkedHashMap<String, Object> mapClassData() {
-        LinkedHashMap<String, Object> holder = new LinkedHashMap<String, Object>();
+        LinkedHashMap<String, Object> holder = new LinkedHashMap<>();
         holder.put( "_id", this.uniqueId );
         holder.put( "username", this.username );
         holder.put( "password", this.password );
@@ -160,6 +162,50 @@ public class RegistrationBean implements RegistrationBeanInterface {
         holder.put( "answer", this.answer );
         holder.put( "answer_salt", this.saltedAnswer );
         return holder;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getUniqueId() {
+        return uniqueId;
+    }
+
+    public String getRealFirstname() {
+        return realFirstname;
+    }
+
+    public String getRealMiddlename() {
+        return realMiddlename;
+    }
+
+    public String getRealLastname() {
+        return realLastname;
+    }
+
+    public String getSecretQuestion() {
+        return secretQuestion;
+    }
+
+    public byte[] getSaltedQuestion() {
+        return saltedQuestion;
+    }
+
+    public String getAnswer() {
+        return answer;
+    }
+
+    public byte[] getSaltedAnswer() {
+        return saltedAnswer;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public byte[] getSaltedPassword() {
+        return saltedPassword;
     }
 
     @Override

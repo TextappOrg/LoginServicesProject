@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RegistrationDaoMongoDbInterfaceTest {
 
-    RegistrationDaoInterface RD;
-    String uname, pass, ans, que, fn, mn, ln;
+    private RegistrationDaoInterface RD;
+    private String uname, pass, ans, que, fn, mn, ln;
 
     @BeforeEach
     void setUp() throws NamingException {
@@ -36,15 +36,6 @@ class RegistrationDaoMongoDbInterfaceTest {
     }
 
     @Test
-    void checkFromDb() {
-        try {
-            assertTrue( RD.authenticateUser( uname, pass ) );
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Test
     void updateParams() {
         try {
             assertTrue( RD.updateCredentials( uname, "Dummy2", null, null, null, "Bablu", "", "" ) );
@@ -53,13 +44,4 @@ class RegistrationDaoMongoDbInterfaceTest {
         }
     }
 
-
-    @Test
-    void reCheckFromDb() {
-        try {
-            assertTrue( RD.authenticateUser( "Dummy2", "Bablu" ) );
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-    }
 }

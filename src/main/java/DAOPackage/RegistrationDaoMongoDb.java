@@ -13,16 +13,11 @@ import org.bson.types.Binary;
 
 import javax.naming.NamingException;
 import javax.validation.constraints.NotNull;
-import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.set;
@@ -31,6 +26,7 @@ import static com.mongodb.client.model.Updates.set;
  * This class is the DAO for registration. It is advisable to use the builder
  * to construct the the RegistrationDaoInterface object.
  */
+@SuppressWarnings("WeakerAccess")
 public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
     private RegistrationBean registrationBean;
     private MongoCollection mongoCollection;
@@ -145,43 +141,51 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
      * @param username username provided by user
      * @param password password provided by the user
      * @return true if authenticated else false
-     * @throws InvalidKeySpecException
-     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeySpecException Thrown by the Crypto class
+     * @throws NoSuchAlgorithmException Thrown by the Crypto class
      */
     @Override
     @SuppressWarnings(value = "unchecked")
-    public boolean authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
+    public LinkedHashMap<String, Object> authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
             NoSuchAlgorithmException {
+        LinkedHashMap<String,Object> holderMap = new LinkedHashMap<>();
         this.aClass = new EncryptClass( 2048, 256, 100000 );
         Bson filter = new Document( "username", username );
         List<Document> result = (List<Document>) this.mongoCollection.find( filter ).into( new ArrayList<Document>() );
-        for (Document doc : result) {
+        if (!result.isEmpty()) {
+            Document doc = result.get( 0 );
             Binary namakTemp = doc.get( "pass_salt", org.bson.types.Binary.class );
             byte[] namak = namakTemp.getData();
             String pass = doc.getString( "password" );
-            return aClass.chkPass( password, pass, namak );
+            if (aClass.chkPass( password, pass, namak)){
+                Bson tokenFilter = new Document("clientToken",new Document("$exists",true)).append("serverToken",
+                        new Document("$exists",true ));
+                List<Document> tokenResults = (List<Document>) this.mongoCollection.find(tokenFilter).into(new ArrayList());
+                if (tokenResults.isEmpty()) {
+                    String loginTokenServer = HandymanClass.generateToken();
+                    String loginTokenClient = HandymanClass.generateToken() + HandymanClass.makeUID( username );
+                    holderMap.put( "serverToken", loginTokenServer );
+                    holderMap.put( "clientToken", loginTokenClient );
+                    Bson temp = new Document( "$set", new Document( holderMap ) );
+                    this.mongoCollection.updateOne( filter, temp );
+                    holderMap.put( "username", tokenResults.get( 0 ).get( "username" ) );
+                    holderMap.put( "UUID" , tokenResults.get( 0 ).get( "_id" ) );
+                    holderMap.put( "flag", "new" );
+                    return holderMap;
+                } else {
+                    holderMap.put("flag","logged");
+                    return holderMap;
+                }
+            }
         }
+        holderMap.put("flag","NaN");
+        return holderMap;
+    }
+
+    @Override
+    public boolean logoutService(@NotNull String username, @NotNull String clientToken) {
         return false;
     }
-
-    @Override
-    public RegistrationDaoInterface setRealfirstname(String realFirstname) {
-        this.realFirstname = realFirstname;
-        return this;
-    }
-
-    @Override
-    public RegistrationDaoInterface setRealmiddlename(String realMiddlename) {
-        this.realMiddlename = realMiddlename;
-        return this;
-    }
-
-    @Override
-    public RegistrationDaoInterface setReallastname(String realLastname) {
-        this.realLastname = realLastname;
-        return this;
-    }
-
 
     /**
      * @param UserId         username to check against. It is base64 encoded
@@ -193,8 +197,8 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
      * @param SecretQuestion new secret question
      * @param Answer         new answer to secret question
      * @return True if changes made else false
-     * @throws InvalidKeySpecException
-     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeySpecException Thrown by Crypto class
+     * @throws NoSuchAlgorithmException Thrown by Crypto class
      */
     @Override
     @SuppressWarnings(value = "unchecked")
@@ -260,13 +264,33 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
             Document tempDoc2 = new Document(  );
             for(Document doc : result) tempDoc2 = doc;
             Objects.requireNonNull( tempDoc2 ).append( "_id", newUUID );
-            this.mongoCollection.dropIndex(new Document("username", 1)); //or this.mongoCollection.dropIndex("username_1");
+            this.mongoCollection.dropIndex(new Document("username", 1)); // or this.mongoCollection.dropIndex("username_1");
             this.mongoCollection.deleteOne( filter );
             this.mongoCollection.createIndex( tempDoc, new IndexOptions().unique( true ) );
             this.mongoCollection.insertOne( tempDoc2 );
             return true;
         }
         return false;
+    }
+
+
+
+    @Override
+    public RegistrationDaoInterface setRealfirstname(String realFirstname) {
+        this.realFirstname = realFirstname;
+        return this;
+    }
+
+    @Override
+    public RegistrationDaoInterface setRealmiddlename(String realMiddlename) {
+        this.realMiddlename = realMiddlename;
+        return this;
+    }
+
+    @Override
+    public RegistrationDaoInterface setReallastname(String realLastname) {
+        this.realLastname = realLastname;
+        return this;
     }
 
     @Override
@@ -306,5 +330,7 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
         this.answer = answer;
         return this;
     }
+
+
 
 }
