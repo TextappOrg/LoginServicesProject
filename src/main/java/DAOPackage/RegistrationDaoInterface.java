@@ -9,18 +9,15 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.LinkedHashMap;
 
 public interface RegistrationDaoInterface {
-    @SuppressWarnings(value = "unchecked")
     boolean insertIntoDb();
 
-    @SuppressWarnings(value = "unchecked")
     boolean updateCredentials(@NotNull String UserId, @Nullable String Username,
                               @Nullable String realFirstname, @Nullable String realMiddleName, @Nullable String realLastname,
                               @Nullable String Password, @Nullable String SecretQuestion, @Nullable String Answer)
             throws InvalidKeySpecException, NoSuchAlgorithmException;
 
-    boolean changeUniqueid(@NotNull String username);
+    boolean changeUniqueid(@NotNull String uId, @NotNull String password);
 
-    @SuppressWarnings(value = "unchecked")
     LinkedHashMap<String, Object> authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
             NoSuchAlgorithmException;
 

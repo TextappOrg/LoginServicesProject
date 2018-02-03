@@ -18,6 +18,7 @@ import java.lang.annotation.Retention;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -108,6 +109,28 @@ public class RegistrationController {
         }
     }
 
+
+    /**
+     * @param username
+     * @param clientToken
+     * @return
+     */
+    @POST
+    @Path( "/Logout" )
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @SuppressWarnings( "javadoc" )
+    public Response logoutUser(@NotNull @FormParam( "username" ) String username,
+                               @NotNull @FormParam( "clientToken" ) String clientToken){
+        try {
+            return this.registrationDaoInstanceMongoDb.createRegistrationDAO().logoutService( username,clientToken )
+                    ? Response.status( Response.Status.OK ).build() : Response.status( Response.Status.UNAUTHORIZED )
+                    .build();
+        } catch (NamingException e) {
+            return Response.status( Response.Status.INTERNAL_SERVER_ERROR ).build();
+        }
+    }
+
+
     /**
      * @param userId           UUID of the user
      * @param username         username
@@ -126,15 +149,16 @@ public class RegistrationController {
                                      @Nullable @FormParam("middleName") String middleName,
                                      @Nullable @FormParam("lastName") String lastName,
                                      @Nullable @FormParam("password") String password,
-                                     @Nullable @FormParam( "confirmPassword" ) String confirmPassword,
+                                     @Nullable @FormParam("confirmPassword" ) String confirmPassword,
                                      @Nullable @FormParam("securityQuestion") String securityQuestion,
                                      @Nullable @FormParam("answer") String answer) throws NamingException {
-        if(!confirmPassword.equals( password )) return Response.status( 401 ).build();
+        if((confirmPassword != null) && confirmPassword.equalsIgnoreCase(password))
+            return Response.status( 401 ).build();
         else {
             try {
                 return this.registrationDaoInstanceMongoDb.createRegistrationDAO().updateCredentials( userId, username, firstName, middleName, lastName, password, securityQuestion, answer )
                         ? Response.status( 200 ).build() : Response.status( 406 ).build();
-            } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            } catch (InvalidKeySpecException | NoSuchAlgorithmException | NullPointerException e) {
                 Logger.getAnonymousLogger().log( Level.SEVERE, e.getMessage() );
                 return Response.status( 500 ).build();
             }
@@ -148,8 +172,9 @@ public class RegistrationController {
     @PUT
     @Path("/ResetUID")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response resetUid(@NotNull @FormParam("UID") String Uid) throws NamingException {
-        return this.registrationDaoInstanceMongoDb.createRegistrationDAO().changeUniqueid( Uid )
+    public Response resetUid(@NotNull @FormParam("UID") String Uid, @NotNull @FormParam("password") String password)
+            throws NamingException {
+        return this.registrationDaoInstanceMongoDb.createRegistrationDAO().changeUniqueid( Uid, password )
                 ? Response.status( 200 ).build() : Response.status( 406 ).build();
     }
 }

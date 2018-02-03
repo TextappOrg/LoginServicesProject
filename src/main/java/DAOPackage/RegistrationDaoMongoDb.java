@@ -36,9 +36,11 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
     private String realFirstname;
     private String realMiddlename;
     private String realLastname;
+
     private transient String secretQuestion;
     private transient String answer;
     private transient String password;
+
     private transient byte[] saltedPeanutsPass;
     private transient byte[] saltedPeanutsQuestion;
     private transient byte[] saltedPeanutsAns;
@@ -146,8 +148,8 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
      */
     @Override
     @SuppressWarnings(value = "unchecked")
-    public LinkedHashMap<String, Object> authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
-            NoSuchAlgorithmException {
+    public LinkedHashMap<String, Object> authenticateUser(@NotNull String username, @NotNull String password)
+            throws InvalidKeySpecException, NoSuchAlgorithmException {
         LinkedHashMap<String,Object> holderMap = new LinkedHashMap<>();
         this.aClass = new EncryptClass( 2048, 256, 100000 );
         Bson filter = new Document( "username", username );
@@ -158,19 +160,27 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
             byte[] namak = namakTemp.getData();
             String pass = doc.getString( "password" );
             if (aClass.chkPass( password, pass, namak)){
-                Bson tokenFilter = new Document("clientToken",new Document("$exists",true)).append("serverToken",
-                        new Document("$exists",true ));
-                List<Document> tokenResults = (List<Document>) this.mongoCollection.find(tokenFilter).into(new ArrayList());
+
+                Bson tokenFilter =  new Document(((Document) filter)).append("clientToken",new Document("$exists",true ))
+                        .append("serverToken", new Document("$exists",true)); // client token checking filter
+                List<Document> tokenResults = (List<Document>) this.mongoCollection.find(tokenFilter).into(new
+                        ArrayList()); // collection to store the filtered results where client token field is present
+
                 if (tokenResults.isEmpty()) {
-                    String loginTokenServer = HandymanClass.generateToken();
-                    String loginTokenClient = HandymanClass.generateToken() + HandymanClass.makeUID( username );
-                    holderMap.put( "serverToken", loginTokenServer );
-                    holderMap.put( "clientToken", loginTokenClient );
-                    Bson temp = new Document( "$set", new Document( holderMap ) );
-                    this.mongoCollection.updateOne( filter, temp );
-                    holderMap.put( "username", tokenResults.get( 0 ).get( "username" ) );
-                    holderMap.put( "UUID" , tokenResults.get( 0 ).get( "_id" ) );
+                    //Set the tokens
+                    String loginTokenServer = HandymanClass.makeUID(System.nanoTime()+""+System.currentTimeMillis());
+                    String loginTokenClient = HandymanClass.makeUID(System.nanoTime()+""+System.currentTimeMillis());
+
+                    holderMap.put("serverToken", loginTokenServer);
+                    holderMap.put("clientToken", loginTokenClient);
+                    // Write tokens to persistence
+                    Bson temp = new Document("$set", new Document( holderMap ));
+                    this.mongoCollection.updateOne(filter, temp);
+
+                    holderMap.put( "username", result.get( 0 ).get( "username" ));
+                    holderMap.put( "UUID" , result.get( 0 ).get( "_id" ));
                     holderMap.put( "flag", "new" );
+                    System.out.println(loginTokenClient +"\n"+loginTokenServer);
                     return holderMap;
                 } else {
                     holderMap.put("flag","logged");
@@ -182,10 +192,25 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
         return holderMap;
     }
 
+
+    /**
+     * @param username the user's username
+     * @param clientToken the unique token of the user which is stored in the user's machine
+     * @return true if the username and token match, false otherwise
+     */
     @Override
+    @SuppressWarnings( "unchecked" )
     public boolean logoutService(@NotNull String username, @NotNull String clientToken) {
-        return false;
+        Bson filter = new Document( "username",username ).append( "clientToken" ,clientToken);
+        List<Document> result = (List<Document>) this.mongoCollection.find(filter).into(new ArrayList());
+        if(!result.isEmpty()){
+            Bson actionFilter = new Document( "$unset",new Document( "clientToken",1 ).append( "serverToken",1 ) );
+            this.mongoCollection.updateOne( filter,actionFilter );
+            return true;
+        }
+        else return false;
     }
+
 
     /**
      * @param UserId         username to check against. It is base64 encoded
@@ -207,6 +232,7 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
                                      @Nullable String Password, @Nullable String SecretQuestion, @Nullable String Answer)
             throws InvalidKeySpecException, NoSuchAlgorithmException {
         Bson filter = new Document( "_id", UserId );
+
         String newUsername = Username == null || Username.isEmpty() ? "" : Username;
         String newFirstname = realFirstName == null || realFirstName.isEmpty() ? "" : realFirstName;
         String newMiddlename = realMiddleName == null || realMiddleName.isEmpty() ? "" : realMiddleName;
@@ -247,23 +273,27 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
             if (!newUsername.isEmpty() || !newUsername.equalsIgnoreCase( "" )) {
                 this.mongoCollection.updateOne( filter, set( "username", newUsername ) );
             }
+
             return true;
         } else {
             return false;
         }
     }
 
+    /**
+     * @param userID unique ID of the user
+     * @param password user's password
+     * @return true if UUID is changed, false otherwise
+     */
     @SuppressWarnings(value = "unchecked")
     @Override
-    public boolean changeUniqueid(@NotNull String userID) {
+    public boolean changeUniqueid(@NotNull String userID, @NotNull String password) {
         Bson filter = new Document( "_id", userID );
         Document tempDoc = new Document( "username", 1 );
         List<Document> result = new ArrayList<>( this.mongoCollection.find( filter ).into( new ArrayList<Document>() ) );
         if (!result.isEmpty()) {
-            String newUUID = HandymanClass.makeUID( userID.split( "_" )[3] );
-            Document tempDoc2 = new Document(  );
-            for(Document doc : result) tempDoc2 = doc;
-            Objects.requireNonNull( tempDoc2 ).append( "_id", newUUID );
+            String newUUID = HandymanClass.makeUID(userID);
+            Document tempDoc2 = result.get(0).append( "_id", newUUID );
             this.mongoCollection.dropIndex(new Document("username", 1)); // or this.mongoCollection.dropIndex("username_1");
             this.mongoCollection.deleteOne( filter );
             this.mongoCollection.createIndex( tempDoc, new IndexOptions().unique( true ) );
@@ -272,7 +302,6 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
         }
         return false;
     }
-
 
 
     @Override
@@ -330,7 +359,5 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
         this.answer = answer;
         return this;
     }
-
-
 
 }
