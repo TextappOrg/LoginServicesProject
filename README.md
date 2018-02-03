@@ -33,14 +33,14 @@ other errors a code 500 is shown.
 
 ### Updating unique user ID  
 Each user is identified by a unique user ID which is a combination of 
-[UUID](https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#randomUUID--), [Hex String of System.nanoTime()](https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#nanoTime--) and the username 
-itself. It can only be viewed on the client but has to passed as a URL path parameter. Success is 200 as usual, failure is 406. 
+[UUID](https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#randomUUID--), [Hex String of System.nanoTime()](https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#nanoTime--) and some random parameter. It can only be 
+viewed on the client but has to passed as a URL path parameter. Success is 200 as usual, failure is 406. 
 
 ## Possible Bugs 
 * Changing the unique user ID may result in duplicate inserts on username. [See this SO thread](https://stackoverflow.com/questions/4012855/how-update-the-id-of-one-mongodb-document#comment84079190_4012997) thread for more details.
 
 * Communication with Atlas cluster takes long time.  
 
-Status - **Incomplete**
+Status - **Completed**
 
 
