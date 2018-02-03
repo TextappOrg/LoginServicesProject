@@ -41,6 +41,8 @@ viewed on the client but has to passed as a URL path parameter. Success is 200 a
 
 * Communication with Atlas cluster takes long time.  
 
+* JUnit tests not updated. May crash or may not produce desired result. Please screen test.
+
 Status - **Completed**
 
 
