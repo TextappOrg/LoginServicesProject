@@ -180,7 +180,7 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
                     holderMap.put( "username", result.get( 0 ).get( "username" ));
                     holderMap.put( "UUID" , result.get( 0 ).get( "_id" ));
                     holderMap.put( "flag", "new" );
-                    System.out.println(loginTokenClient +"\n"+loginTokenServer);
+                    holderMap.remove( "serverToken" );
                     return holderMap;
                 } else {
                     holderMap.put("flag","logged");

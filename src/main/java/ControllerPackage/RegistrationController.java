@@ -54,20 +54,24 @@ public class RegistrationController {
                                  @NotNull @FormParam("password") String password,
                                  @NotNull @FormParam( "confirmPassword" ) String confirmPassword,
                                  @NotNull @FormParam("securityQuestion") String securityQuestion,
-                                 @NotNull @FormParam("answer") String answer) throws NamingException {
+                                 @NotNull @FormParam("answer") String answer)
+             {
         if(!confirmPassword.equals( password )) return Response.status( 401 ).build();
         else {
-            this.registrationDaoInstanceMongoDb = new RegistrationDaoMongoDb()
-                    .setUsername( username )
-                    .setRealfirstname( firstName )
-                    .setRealmiddlename( middleName == null || middleName.isEmpty() ? "" : middleName )
-                    .setReallastname( lastName )
-                    .setUniqueid( username )
-                    .setPassword( password )
-                    .setSecretQuestion( securityQuestion )
-                    .setAnswer( answer )
-                    .createRegistrationDAO();
-
+            try {
+                this.registrationDaoInstanceMongoDb = new RegistrationDaoMongoDb()
+                        .setUsername( username )
+                        .setRealfirstname( firstName )
+                        .setRealmiddlename( middleName == null || middleName.isEmpty() ? "" : middleName )
+                        .setReallastname( lastName )
+                        .setUniqueid( username )
+                        .setPassword( password )
+                        .setSecretQuestion( securityQuestion )
+                        .setAnswer(answer)
+                        .createRegistrationDAO();
+            } catch (NamingException e) {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            }
             return (this.registrationDaoInstanceMongoDb.insertIntoDb())
                     ? Response.status(200).build() : Response.status(406).build();
         }
@@ -91,17 +95,15 @@ public class RegistrationController {
                                                     .createRegistrationDAO()
                                                     .authenticateUser( username,password );
             if(judgement.get("flag").equals("new")){
-                ObjectMapper mapper = new ObjectMapper();
                 judgement.remove( "flag" );
-                String jsonDat = mapper.writeValueAsString( judgement);
-                return Response.status(Response.Status.OK).header("token",jsonDat).cookie(new NewCookie("token",
-                        jsonDat)).build();
-            }else if(((String) judgement.get( "flag" )).equalsIgnoreCase( "logged" )){
-                return Response.status(Response.Status.CONFLICT).entity( "User already logged in" ).build();
-            }else if(((String) judgement.get( "flag" )).equalsIgnoreCase( "NaN" )){
+                String jsonDat = new ObjectMapper().writeValueAsString(judgement);
+                return Response.ok(jsonDat,MediaType.APPLICATION_JSON).build();
+            }else if(((String) judgement.get( "flag" )).equalsIgnoreCase("logged" )){
+                return Response.status(Response.Status.CONFLICT).entity("User already logged in").build();
+            }else if(((String) judgement.get( "flag" )).equalsIgnoreCase("NaN" )){
                 return Response.status( Response.Status.NO_CONTENT ).entity( "User not found" ).build();
             }
-            return Response.status( Response.Status.NOT_FOUND ).build();
+            return Response.status(Response.Status.NOT_FOUND).build();
 
         } catch (InvalidKeySpecException | NamingException | JsonProcessingException | NoSuchAlgorithmException e) {
             Logger.getAnonymousLogger().log( Level.SEVERE, e.getMessage() );

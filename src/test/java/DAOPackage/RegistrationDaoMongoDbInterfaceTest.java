@@ -16,7 +16,7 @@ class RegistrationDaoMongoDbInterfaceTest {
 
     @BeforeEach
     void setUp() throws NamingException {
-        uname = pass = ans = que = fn = ln = mn = "dummy";
+        uname = pass = ans = que = fn = ln = mn = "Dummy";
 
         RD = new RegistrationDaoMongoDb()
                 .setUsername( uname )
@@ -31,12 +31,12 @@ class RegistrationDaoMongoDbInterfaceTest {
     }
 
     @Test
-    void writeToDb() {
+    private void writeToDb() {
         assertTrue( RD.insertIntoDb() );
     }
 
     @Test
-    void updateParams() {
+    private void updateParams() {
         try {
             assertTrue( RD.updateCredentials( uname, "Dummy2", null, null, null, "Bablu", "", "" ) );
         } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
