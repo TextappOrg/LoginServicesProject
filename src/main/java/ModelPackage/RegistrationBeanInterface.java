@@ -1,6 +1,7 @@
 package ModelPackage;
 
 import javax.validation.constraints.NotNull;
+import java.util.Map;
 
 public interface RegistrationBeanInterface extends java.io.Serializable {
     RegistrationBeanInterface setUsername(@NotNull String username);
@@ -33,4 +34,6 @@ public interface RegistrationBeanInterface extends java.io.Serializable {
 
     @Override
     int hashCode();
+
+    Map<String,Object> mapClassData();
 }

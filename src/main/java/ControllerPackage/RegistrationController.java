@@ -5,6 +5,7 @@ import DAOPackage.RegistrationDaoMongoDb;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.istack.internal.Nullable;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.Resource;
 import javax.naming.NamingException;
@@ -167,16 +168,16 @@ public class RegistrationController {
         }
     }
 
+
     /**
      * @param Uid User UUID
-     * @return HTTP status code 200 if successful, 401 otherwise
+     * @param password User account password
      */
     @PUT
     @Path("/ResetUID")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response resetUid(@NotNull @FormParam("UID") String Uid, @NotNull @FormParam("password") String password)
-            throws NamingException {
-        return this.registrationDaoInstanceMongoDb.createRegistrationDAO().changeUniqueid( Uid, password )
-                ? Response.status( 200 ).build() : Response.status( 406 ).build();
+    public void resetUid(@NotNull @FormParam("UID") String Uid,
+                         @NotNull @FormParam("password") String password) {
+       this.registrationDaoInstanceMongoDb.fireUidChangeToAllServices(Uid,password);
     }
 }

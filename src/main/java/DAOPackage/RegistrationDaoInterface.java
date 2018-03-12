@@ -16,7 +16,7 @@ public interface RegistrationDaoInterface {
                               @Nullable String Password, @Nullable String SecretQuestion, @Nullable String Answer)
             throws InvalidKeySpecException, NoSuchAlgorithmException;
 
-    boolean changeUniqueid(@NotNull String uId, @NotNull String password);
+    void fireUidChangeToAllServices(@NotNull String UUID, @NotNull String password);
 
     LinkedHashMap<String, Object> authenticateUser(@NotNull String username, @NotNull String password) throws InvalidKeySpecException,
             NoSuchAlgorithmException;

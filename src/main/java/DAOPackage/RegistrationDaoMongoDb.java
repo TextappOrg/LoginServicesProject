@@ -2,8 +2,10 @@ package DAOPackage;
 
 import CryptoPackage.EncryptClass;
 import ModelPackage.RegistrationBean;
+import ModelPackage.RegistrationBeanInterface;
 import UtilityPackage.HandymanClass;
 import UtilityPackage.MongoDbConnClass;
+import UtilityPackage.PushChangeUIDToServices;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.IndexOptions;
 import com.sun.istack.internal.Nullable;
@@ -13,9 +15,14 @@ import org.bson.types.Binary;
 
 import javax.naming.NamingException;
 import javax.validation.constraints.NotNull;
+import javax.ws.rs.core.Response;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,7 +35,7 @@ import static com.mongodb.client.model.Updates.set;
  */
 @SuppressWarnings("WeakerAccess")
 public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
-    private RegistrationBean registrationBean;
+    private RegistrationBeanInterface registrationBean;
     private MongoCollection mongoCollection;
 
     private String username;
@@ -286,21 +293,41 @@ public class RegistrationDaoMongoDb implements RegistrationDaoInterface {
      * @return true if UUID is changed, false otherwise
      */
     @SuppressWarnings(value = "unchecked")
-    @Override
-    public boolean changeUniqueid(@NotNull String userID, @NotNull String password) {
+    private String changeUniqueid(@NotNull String userID, @NotNull String password) {
         Bson filter = new Document( "_id", userID );
         Document tempDoc = new Document( "username", 1 );
         List<Document> result = new ArrayList<>( this.mongoCollection.find( filter ).into( new ArrayList<Document>() ) );
         if (!result.isEmpty()) {
             String newUUID = HandymanClass.makeUID(userID);
             Document tempDoc2 = result.get(0).append( "_id", newUUID );
-            this.mongoCollection.dropIndex(new Document("username", 1)); // or this.mongoCollection.dropIndex("username_1");
+            this.mongoCollection.dropIndex(new Document("username", 1));// or this.mongoCollection.dropIndex("username_1");
             this.mongoCollection.deleteOne( filter );
             this.mongoCollection.createIndex( tempDoc, new IndexOptions().unique( true ) );
             this.mongoCollection.insertOne( tempDoc2 );
-            return true;
+            return newUUID;
         }
-        return false;
+        return "";
+    }
+
+    /**
+     * @param UUID old UUID from client
+     * @param password client account password
+     */
+    @Override
+    public void fireUidChangeToAllServices(@NotNull String UUID, @NotNull String password){
+        String newUUID = changeUniqueid(UUID,password);
+        if(newUUID.length() > 0){
+            ExecutorService executorService = Executors
+                    .newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+            Runnable pushUIDChangeToFrndMgmtServices = new PushChangeUIDToServices(UUID,newUUID,
+                    PushChangeUIDToServices.frndMgmtSrvcEndpoint);
+            Runnable pushUIDChangeToNotifServices = new PushChangeUIDToServices(UUID,newUUID,
+                    PushChangeUIDToServices.NotifSrvcEndpoint);
+
+            executorService.execute(pushUIDChangeToFrndMgmtServices);
+            executorService.execute(pushUIDChangeToNotifServices);
+        }
     }
 
 
